@@ -23,5 +23,5 @@ export const publishToQueue = async (queue, message) => {
         throw new Error('Rabbitmq channel is not initialized');
     }
     await channel.assertQueue(queue, { durable: true });
-    await channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true });
+    await channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true, contentType: 'application/json', });
 };

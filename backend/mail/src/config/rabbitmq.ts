@@ -21,10 +21,4 @@ export const connectRabbitMQ = async()=>{
     }
 }
 
- export const consumeFromQueue = async(queue : string, handler: (msg: amqp.ConsumeMessage | null) => void)=>{
-    if(!channel){
-        throw new Error('Rabbitmq channel is not initialized');
-    }
-    await channel.assertQueue(queue, {durable: true});
-    await channel.consume(queue, handler, {noAck: true});
-}   
+  
