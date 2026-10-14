@@ -21,8 +21,10 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@upstash/redis": "^1.39.0",
     "amqplib": "^2.2.0",
+    "bcrypt": "^6.0.0",
     "concurrently": "^10.0.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
