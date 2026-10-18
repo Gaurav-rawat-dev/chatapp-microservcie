@@ -5,6 +5,7 @@ dotenv.config()
 import connectDb from './config/db.js';
 import { redis } from './config/redis.js';
 import { connectRabbitMQ, publishToQueue } from './config/rabbitmq.js';
+import userRouter from './routes/userRoutes.js';
 
 const port = process.env.PORT;
 
@@ -17,7 +18,6 @@ async function startServer() {
     const app = express();
     app.use(express.json());
     await connectRabbitMQ();
-    await publishToQueue('test-queue', 'Hello, RabbitMQ from test  queue!');
 
     await redis.set('connection-test', 'OK')
 
@@ -28,10 +28,13 @@ async function startServer() {
       console.error('Redis connection failed');
     }
 
-    app.get('/', (req: Request, res: Response) => {
-      console.log('Received a GET request at /');
-      res.json({ 'message': 'Hello, World!' });
-    });
+    // app.get('/', (req: Request, res: Response) => {
+    //   console.log('Received a GET request at /');
+    //   res.json({ 'message': 'Hello, World!' });
+    // });
+
+    app.use('/api/v1', userRouter);
+    
 
 
     app.listen(port, () => {

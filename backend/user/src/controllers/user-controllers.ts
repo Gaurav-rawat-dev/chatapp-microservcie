@@ -1,31 +1,23 @@
 
 import type { Request, Response } from 'express';
+import {redis} from '../config/redis.js';
 import bcrypt from 'bcrypt';
 import { randomInt } from 'node:crypto';
 
 import User from '../models/User.js'
 import { publishToQueue } from '../config/rabbitmq.js';
 
-export const loginController = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+export const loginController = async ( req: Request, res: Response ): Promise<void> => {
+    console.log('Login controller invoked with request body:', req.body);
     try {
-        const { email, password } = req.body as {
+        const { email } = req.body as {
             email?: string;
-            password?: string;
         };
 
-        // 1. Validate request
-        if (
-            typeof email !== 'string' ||
-            typeof password !== 'string' ||
-            !email.trim() ||
-            !password
-        ) {
+        if (!email) {
             res.status(400).json({
                 success: false,
-                message: 'Email and password are required',
+                message: 'Email is required',
             });
             return;
         }
@@ -33,44 +25,44 @@ export const loginController = async (
         const normalizedEmail = email.trim().toLowerCase();
 
         // 2. Find user. Explicitly select password if schema hides it.
-        const user = await User.findOne({
-            email: normalizedEmail,
-        }).select('+password');
+        // const user = await User.findOne({
+        //     email: normalizedEmail,
+        // })
 
-        if (!user) {
-            res.status(401).json({
+        // if (!user) {
+        //     res.status(401).json({
+        //         success: false,
+        //         message: 'Invalid email. Please check your email and try again.',
+        //     });
+        //     return;
+        // }
+        
+        const rateLimitKey = `otp:ratelimit:${email}`
+        const rateLimit = await redis.get(rateLimitKey);
+        if(rateLimit){
+            res.status(429).json({
                 success: false,
-                message: 'Invalid email or password',
-            });
-            return;
-        }
-
-        // 3. Verify password
-        const isPasswordValid = await bcrypt.compare(
-            password,
-            user.password
-        );
-
-        if (!isPasswordValid) {
-            res.status(401).json({
-                success: false,
-                message: 'Invalid email or password',
+                message: 'Too many OTP requests. Please try again later.',
             });
             return;
         }
 
         // 4. Generate a cryptographically secure 6-digit OTP
         const otp = randomInt(100000, 1000000).toString();
+        const otpKey = `otp:${email}`
+
+        await redis.set(otpKey, otp, { ex: 300 }) // 5 minutes expiry    })
+        await redis.set(rateLimitKey, "true", { ex: 60 }) // 1 minute rate limit})
+
+
 
         // 5. Store only the OTP hash and expiry in the database
-        user.loginOtpHash = await bcrypt.hash(otp, 10);
-        user.loginOtpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-        await user.save();
 
         // 6. Publish the event for the Mail Service
         await publishToQueue('sendotp', {
-            email: user.email,
+            // email: user.email,
+            email: normalizedEmail,
             otp,
         });
 
@@ -79,7 +71,7 @@ export const loginController = async (
             success: true,
             message: 'OTP requested successfully. Please verify your email.',
             data: {
-                email: user.email,
+                email: normalizedEmail,
                 otpExpiresInSeconds: 300,
             },
         });
