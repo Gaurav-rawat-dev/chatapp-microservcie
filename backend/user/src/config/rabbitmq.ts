@@ -21,7 +21,8 @@ export const connectRabbitMQ = async()=>{
 }
 
 
-export const publishToQueue = async(queue : string, message : string)=>{
+export const publishToQueue = async(queue : string, message : {email:string, otp: string})=>{
+    console.log(`Publishing message to queue ${message}==========================`);
 
     if(!channel){
         throw new Error('Rabbitmq channel is not initialized');
