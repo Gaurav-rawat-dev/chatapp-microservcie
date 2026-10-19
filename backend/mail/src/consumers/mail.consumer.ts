@@ -5,7 +5,7 @@ import {sendOtpEmail} from "../services/mail-service.js";
 
 
 
-const { channel } = await connectRabbitMQ();
+
 
 
 interface SendOtpEvent {
