@@ -185,4 +185,5 @@ export const sendOtpEmail = async ({
     });
 
     console.log(`OTP email sent. Message ID: ${info.messageId}`);
+
 };

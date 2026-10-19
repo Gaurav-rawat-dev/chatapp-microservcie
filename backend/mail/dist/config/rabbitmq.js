@@ -18,10 +18,3 @@ export const connectRabbitMQ = async () => {
         process.exit(1);
     }
 };
-export const consumeFromQueue = async (queue, handler) => {
-    if (!channel) {
-        throw new Error('Rabbitmq channel is not initialized');
-    }
-    await channel.assertQueue(queue, { durable: true });
-    await channel.consume(queue, handler, { noAck: true });
-};

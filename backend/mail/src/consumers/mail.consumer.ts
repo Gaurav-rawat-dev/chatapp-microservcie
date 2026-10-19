@@ -72,4 +72,6 @@ console.log(`Mail consumer connected to RabbitMQ and ready to consume from queue
     );
 
     console.log(`Mail consumer listening on queue: ${QUEUE}`);
+
 };
+
