@@ -1,6 +1,7 @@
 import { redis } from '../config/redis.js';
 import { randomInt } from 'node:crypto';
 import { publishToQueue } from '../config/rabbitmq.js';
+import { generateToken } from '../midllewares/generateToken.js';
 export const loginController = async (req, res) => {
     console.log('Login controller invoked with request body:', req.body);
     try {
@@ -13,17 +14,6 @@ export const loginController = async (req, res) => {
             return;
         }
         const normalizedEmail = email.trim().toLowerCase();
-        // 2. Find user. Explicitly select password if schema hides it.
-        // const user = await User.findOne({
-        //     email: normalizedEmail,
-        // })
-        // if (!user) {
-        //     res.status(401).json({
-        //         success: false,
-        //         message: 'Invalid email. Please check your email and try again.',
-        //     });
-        //     return;
-        // }
         const rateLimitKey = `otp:ratelimit:${email}`;
         const rateLimit = await redis.get(rateLimitKey);
         if (rateLimit) {
@@ -62,4 +52,44 @@ export const loginController = async (req, res) => {
             message: 'Unable to process login right now',
         });
     }
+};
+export const verifyOtpController = async (req, res) => {
+    //  steps 
+    // 1. Get the email and otp from the request body
+    const { email, otp } = req.body;
+    // 2. Validate the input
+    if (!email || !otp) {
+        res.status(400).json({
+            success: false,
+            message: "Email and OTP are required"
+        });
+        return;
+    }
+    // 3. Retrieve the OTP hash from Redis
+    const otpKey = `otp:${email}`;
+    const storedOtp = await redis.get(otpKey);
+    // 4. Compare the provided OTP with the stored hash
+    if (storedOtp !== otp) {
+        res.status(400).json({
+            success: false,
+            message: "Invalid OTP"
+        });
+    }
+    // 5. If valid, generate a JWT token and send it back to the user
+    const token = await generateToken(email);
+    await redis.del(otpKey);
+    res.status(200).json({
+        success: true,
+        message: "OTP verified successfully",
+        data: {
+            token
+        }
+    });
+    // facing issue : generating token, want to debug it amd learn debug how to do it
+    //  steps to debug :
+    // 1. Use console.log statements to print the values of variables at different points in the code.
+    // 2. Use a debugger to step through the code and inspect the values of variables.
+    // 3. Check the logs for any error messages or stack traces that can help identify the issue.
+    // 4. Verify that the JWT_SECRET environment variable is set correctly and is accessible in the code.
+    // 5. Ensure that the jwt.sign function is being called with the correct parameters and that it is returning a valid token.
 };

@@ -1,0 +1,11 @@
+import jwt from 'jsonwebtoken';
+export const generateToken = async (email) => {
+    try {
+        const token = await jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return token;
+    }
+    catch (error) {
+        console.error('Error generating token:', error);
+        throw new Error('Error generating token');
+    }
+};
