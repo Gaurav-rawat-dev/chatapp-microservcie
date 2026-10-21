@@ -2,7 +2,8 @@ import { redis } from '../config/redis.js';
 import { randomInt } from 'node:crypto';
 import User from '../models/User.js';
 import { publishToQueue } from '../config/rabbitmq.js';
-import { generateToken, decodeToken } from '../midllewares/generateToken.js';
+import { generateToken } from '../midllewares/generateToken.js';
+import { decodeToken } from '../midllewares/decodeToken.js';
 export const loginController = async (req, res) => {
     console.log('Login controller invoked with request body:', req.body);
     try {
@@ -121,9 +122,37 @@ export const myProfile = async (req, res) => {
         }
     });
 };
-// const email = (decoded as { email: string }).email;
-// now create myprofile controller to get the user profile from the token and return it to the user
-// steps 1 : Get the token from the request header
-// steps 2 : Verify the token and get the email from it
-// steps 3 : Get the user profile from the database using the email
-// steps 4 : Return the user profile to the user
+export const updateNameController = async (req, res) => {
+    if (!req.user) {
+        res.status(401).json({
+            success: false,
+            message: "Unauthorized"
+        });
+        return;
+    }
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) {
+        res.status(404).json({
+            success: false,
+            message: "User not found"
+        });
+        return;
+    }
+    const { name } = req.body;
+    if (!name) {
+        res.status(400).json({
+            success: false,
+            message: "Name is required"
+        });
+        return;
+    }
+    user.name = name;
+    await user.save();
+    res.status(200).json({
+        success: true,
+        message: "Name updated successfully",
+        data: {
+            user
+        }
+    });
+};
