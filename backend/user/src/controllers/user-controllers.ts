@@ -104,12 +104,4 @@ export const verifyOtpController = async(req: Request , res : Response): Promise
         data: {
             token
         }})
-
-        // facing issue : generating token, want to debug it amd learn debug how to do it
-        //  steps to debug :
-        // 1. Use console.log statements to print the values of variables at different points in the code.
-        // 2. Use a debugger to step through the code and inspect the values of variables.
-        // 3. Check the logs for any error messages or stack traces that can help identify the issue.
-        // 4. Verify that the JWT_SECRET environment variable is set correctly and is accessible in the code.
-        // 5. Ensure that the jwt.sign function is being called with the correct parameters and that it is returning a valid token.
 }
