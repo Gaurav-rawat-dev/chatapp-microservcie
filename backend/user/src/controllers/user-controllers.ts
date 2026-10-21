@@ -6,7 +6,7 @@ import { randomInt } from 'node:crypto';
 
 import User from '../models/User.js'
 import { publishToQueue } from '../config/rabbitmq.js';
-import { generateToken } from '../midllewares/generateToken.js';
+import { generateToken, decodeToken } from '../midllewares/generateToken.js';
 
 export const loginController = async ( req: Request, res: Response ): Promise<void> => {
     console.log('Login controller invoked with request body:', req.body);
@@ -96,6 +96,12 @@ export const verifyOtpController = async(req: Request , res : Response): Promise
     })
     }
     // 5. If valid, generate a JWT token and send it back to the user
+    const user = await User.findOne({email})
+    if(!user){
+       await User.create({email, name : email.split('@')[0]})
+        return;
+    }
+
     const token = await generateToken(email)
     await redis.del(otpKey)
     res.status(200).json({
@@ -105,3 +111,47 @@ export const verifyOtpController = async(req: Request , res : Response): Promise
             token
         }})
 }
+
+
+
+export const myProfile = async(req: Request, res: Response): Promise<void>=>{
+    const authHeader = req.headers.authorization;
+    if(!authHeader || !authHeader.startsWith('Bearer ')){
+        res.status(401).json({
+            success: false,
+            message: "Authorization header missing or malformed"
+        })
+        return;
+    }
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    
+    const decoded = await decodeToken(token);
+    console.log('Decoded token:', decoded);
+
+    const user  = await User.findOne({email: (decoded as { email: string }).email})
+
+    if(!user){
+        res.status(404).json({
+            success: false,
+            message: "User not found"
+        })
+        return;
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "User profile retrieved successfully",
+        data: {
+            user,
+            token
+        }
+    })
+}
+    // const email = (decoded as { email: string }).email;
+
+// now create myprofile controller to get the user profile from the token and return it to the user
+// steps 1 : Get the token from the request header
+// steps 2 : Verify the token and get the email from it
+// steps 3 : Get the user profile from the database using the email
+// steps 4 : Return the user profile to the user
