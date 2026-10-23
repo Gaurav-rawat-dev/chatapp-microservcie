@@ -1,18 +1,45 @@
 import { Request, Response } from 'express';
 import Chat from "../model/chat.js";
+import asyncwrapper from '../utils/asyncHandler.js';
 
-export const createChat = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { senderId, receiverId } = req.body as { senderId: string; receiverId: string };
-        const chat = await Chat.create({
-            users: [senderId, receiverId],
-            lastMessage: {
-                sender: senderId,
-                content: ''
-            }
+export const createChat = asyncwrapper(async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user?._id
+    
+    if (!userId) {
+        res.status(401).json({
+            success: false,
+            message: "Unauthorized"
         });
-        res.status(201).json(chat);
-    } catch (error) {
-        res.status(500).json({ message: 'Error creating chat' });
+        return;
     }
-};  
+
+    const {otherUserId} = req.body as {otherUserId: string};
+    if (!otherUserId) {
+        res.status(400).json({
+            success: false,
+            message: "Other user ID is required"
+        });
+        return;
+    }
+
+    const existingChat = await Chat.findOne({
+        users: { $all: [userId, otherUserId] }
+    });
+    if (existingChat) {
+        res.status(400).json({
+            success: false,
+            message: "Chat already exists",
+            chatId : existingChat._id
+        });
+        return;
+    }
+    const newChat = new Chat({
+        users: [userId, otherUserId],
+    });
+    await newChat.save();
+    res.status(201).json({
+        success : true,
+        message : "chat created",
+        chatId: newChat._id 
+    });
+});  
